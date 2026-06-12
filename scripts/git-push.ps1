@@ -1,30 +1,31 @@
-# Push в GitHub, токен читается из .github-token в корне проекта.
+# Push to GitHub; token is read from .github-token in project root.
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $tokenFile = Join-Path $root ".github-token"
 
 if (-not (Test-Path $tokenFile)) {
-    Write-Error "Нет файла .github-token. Скопируйте: copy .github-token.example .github-token"
+    Write-Error "Missing .github-token. Copy: copy .github-token.example .github-token"
 }
 
 $token = (Get-Content $tokenFile -Raw).Trim()
-if (-not $token -or $token -match '^#|^ghp_вставьте') {
-    Write-Error "Вставьте реальный токен ghp_... в .github-token (одна строка)"
+if (-not $token -or $token.StartsWith("#") -or $token -like "*вставьте*") {
+    Write-Error "Put a real ghp_ token in .github-token (single line)"
 }
 
 $remote = git -C $root remote get-url origin 2>$null
 if (-not $remote) {
-    Write-Error "git remote origin не настроен"
+    Write-Error "git remote origin is not configured"
 }
 
-# https://github.com/USER/REPO.git → push URL с токеном
-$pushUrl = $remote -replace '^https://github\.com/', "https://x-access-token:${token}@github.com/"
-if ($pushUrl -eq $remote) {
+$pushUrl = $remote
+if ($remote -match '^https://github\.com/') {
+    $pushUrl = $remote -replace '^https://github\.com/', "https://x-access-token:${token}@github.com/"
+} elseif ($remote -match '^git@github\.com:') {
     $pushUrl = $remote -replace '^git@github\.com:', "https://x-access-token:${token}@github.com/"
 }
 
 $branch = git -C $root branch --show-current
-Write-Host "Pushing $branch -> origin ..."
+Write-Host "Pushing $branch to origin..."
 git -C $root push $pushUrl $branch
 git -C $root fetch origin
 Write-Host "Done."
