@@ -1,0 +1,43 @@
+services:
+  bot:
+    build: .
+    image: btc-trend-scalper:latest
+    container_name: hype-scalper
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    # Таймфрейм и режим — меняйте здесь или через: docker compose run --rm bot live -t 15m --dry-run
+    command: ["live", "-t", "1h", "--confirm-live", "-c", "config.yaml"]
+
+  bot-dry:
+    profiles: ["dry"]
+    build: .
+    image: btc-trend-scalper:latest
+    container_name: hype-scalper-dry
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    command: ["live", "-t", "1h", "--dry-run", "-c", "config.yaml"]
+
+  backtest:
+    profiles: ["tools"]
+    build: .
+    image: btc-trend-scalper:latest
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+    command: ["backtest", "-t", "1h", "-c", "config.yaml"]
