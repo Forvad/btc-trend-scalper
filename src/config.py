@@ -1,8 +1,19 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
+from typing import TypeVar
+
+T = TypeVar("T")
+
+
+def _dataclass_from_dict(cls: type[T], raw: dict | None) -> T:
+    """Создаёт dataclass, игнорируя неизвестные ключи (config новее кода в Docker)."""
+    if not raw:
+        return cls()
+    allowed = {f.name for f in fields(cls)}
+    return cls(**{k: v for k, v in raw.items() if k in allowed})
 
 import yaml
 
@@ -400,9 +411,9 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
             raw.get("strategy_by_timeframe"), strategy
         ),
         range_strategy=_load_range_strategy(raw.get("range_strategy", {})),
-        hybrid=HybridConfig(**hy) if hy else HybridConfig(),
-        backtest=BacktestConfig(**bt),
-        paper=PaperConfig(**pp),
-        live=LiveConfig(**lv),
-        notifications=NotificationsConfig(**notify_raw) if notify_raw else NotificationsConfig(),
+        hybrid=_dataclass_from_dict(HybridConfig, hy),
+        backtest=_dataclass_from_dict(BacktestConfig, bt),
+        paper=_dataclass_from_dict(PaperConfig, pp),
+        live=_dataclass_from_dict(LiveConfig, lv),
+        notifications=_dataclass_from_dict(NotificationsConfig, notify_raw),
     )
