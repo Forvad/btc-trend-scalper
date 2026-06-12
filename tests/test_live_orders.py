@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.config import AppConfig, ExchangeConfig, LiveConfig
 from src.live.trader import LivePosition, LiveTrader
 
@@ -66,3 +68,45 @@ def test_tick_skips_signal_exit_when_brackets_enabled(
     trader._close_position.assert_not_called()
     trader._manage_bracket_orders.assert_called_once_with(pos, signal)
     assert result["action"] == "hold"
+
+
+@patch("src.live.trader.create_public_exchange")
+@patch("src.live.trader.create_hyperliquid_exchange")
+@patch("src.live.trader.fetch_available_usdc", return_value=105.0)
+def test_calc_order_amount_with_leverage_sizing(_mock_bal, _mock_hl, _mock_pub) -> None:
+    config = AppConfig()
+    config.exchange = ExchangeConfig(symbol="HYPE/USDC:USDC")
+    config.live = LiveConfig(
+        position_size_pct=0.95,
+        use_leverage_for_sizing=True,
+        leverage=5,
+        max_notional_usd=200,
+        min_notional_usd=50,
+    )
+    trader = LiveTrader(config, timeframe="1h", dry_run=False)
+    trader.exchange = MagicMock()
+    trader.exchange.amount_to_precision = lambda _s, a: a
+
+    amount = trader._calc_order_amount(50.0)
+    assert amount == pytest.approx(4.0)  # $200 / $50
+
+
+@patch("src.live.trader.create_public_exchange")
+@patch("src.live.trader.create_hyperliquid_exchange")
+@patch("src.live.trader.fetch_available_usdc", return_value=105.0)
+def test_calc_order_amount_without_leverage_sizing(_mock_bal, _mock_hl, _mock_pub) -> None:
+    config = AppConfig()
+    config.exchange = ExchangeConfig(symbol="HYPE/USDC:USDC")
+    config.live = LiveConfig(
+        position_size_pct=0.95,
+        use_leverage_for_sizing=False,
+        leverage=5,
+        max_notional_usd=200,
+        min_notional_usd=50,
+    )
+    trader = LiveTrader(config, timeframe="1h", dry_run=False)
+    trader.exchange = MagicMock()
+    trader.exchange.amount_to_precision = lambda _s, a: a
+
+    amount = trader._calc_order_amount(50.0)
+    assert amount == pytest.approx(105.0 * 0.95 / 50.0)

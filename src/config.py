@@ -219,6 +219,7 @@ TelegramConfig = NotificationsConfig
 class LiveConfig:
     poll_interval_sec: int = 60
     position_size_pct: float = 0.95
+    use_leverage_for_sizing: bool = False
     leverage: int = 1
     margin_mode: str = "cross"
     slippage: float = 0.001

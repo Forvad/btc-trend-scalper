@@ -122,6 +122,7 @@ paper:
 live:
   poll_interval_sec: 60
   position_size_pct: 0.95
+  use_leverage_for_sizing: true  # номинал ≈ balance × leverage × 95% (до max_notional_usd)
   place_bracket_orders: true
   update_bracket_orders: true
   bracket_update_every_ticks: 5   # ~5 мин при poll 60s — как 5m intrabar в бэктесте

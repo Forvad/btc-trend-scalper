@@ -199,14 +199,37 @@ class LiveTrader:
             available = 10_000.0
         else:
             available = fetch_available_usdc(self.exchange)
-        notional = min(available * self.live.position_size_pct, self.live.max_notional_usd)
-        if available >= self.live.min_notional_usd:
-            notional = min(max(notional, self.live.min_notional_usd), available)
-        if notional < self.live.min_notional_usd:
+
+        leverage = self.live.leverage if self.live.use_leverage_for_sizing else 1
+        buying_power = available * max(leverage, 1)
+        notional = buying_power * self.live.position_size_pct
+        notional = min(notional, self.live.max_notional_usd)
+
+        min_margin = (
+            self.live.min_notional_usd / max(self.live.leverage, 1)
+            if self.live.use_leverage_for_sizing
+            else self.live.min_notional_usd
+        )
+        if available < min_margin:
             raise ValueError(
                 f"Notional ${notional:.2f} < min ${self.live.min_notional_usd:.2f} "
-                f"(balance ${available:.2f})"
+                f"(balance ${available:.2f}, need margin ${min_margin:.2f})"
             )
+
+        if notional < self.live.min_notional_usd:
+            if buying_power >= self.live.min_notional_usd:
+                notional = self.live.min_notional_usd
+            else:
+                raise ValueError(
+                    f"Notional ${notional:.2f} < min ${self.live.min_notional_usd:.2f} "
+                    f"(balance ${available:.2f}, buying power ${buying_power:.2f})"
+                )
+
+        if self.live.use_leverage_for_sizing:
+            notional = min(notional, buying_power)
+        else:
+            notional = min(notional, available)
+
         amount = notional / price
         return float(self.exchange.amount_to_precision(self.symbol, amount))
 
@@ -603,6 +626,7 @@ class LiveTrader:
             self._log(
                 f"{mode} | Hyperliquid | {self.symbol} {self.timeframe} | "
                 f"leverage={self.live.leverage}x | size={self.live.position_size_pct*100:.0f}%"
+                f" | leverage_sizing={'on' if self.live.use_leverage_for_sizing else 'off'}"
             )
             for warning in diagnose_wallet_setup():
                 self._log(f"WARNING: {warning}")
