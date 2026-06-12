@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .env
+.github-token
 .venv/
 venv/
 /data/

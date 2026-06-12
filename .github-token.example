@@ -1,0 +1,9 @@
+# Скопируйте этот файл как .github-token (в корне проекта):
+#   copy .github-token.example .github-token
+#
+# В .github-token — одна строка, только токен (ghp_...).
+# Файл .github-token в git не попадает.
+#
+# Создать токен: https://github.com/settings/tokens → scope "repo"
+#
+ghp_вставьте_токен_сюда_одной_строкой
