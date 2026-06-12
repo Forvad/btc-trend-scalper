@@ -32,7 +32,7 @@ from src.exchange.hyperliquid_client import (
     fetch_available_usdc,
     has_credentials,
 )
-from src.notifications import TelegramNotifier
+from src.notifications import NtfyNotifier
 from src.strategy import TrendScalperStrategy
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import Log, setup_logging
@@ -57,7 +57,7 @@ class LiveTrader:
         self.strategy = TrendScalperStrategy(config.strategy_for_timeframe(timeframe))
         self.fees = config.exchange.fees
         self.live = config.live
-        self.notifier = TelegramNotifier(config.telegram)
+        self.notifier = NtfyNotifier(config.notifications)
         self._last_heartbeat = time.monotonic()
         self._position_tick_count = 0
         self._last_bracket_prices: tuple[float | None, float | None] | None = None

@@ -9,7 +9,7 @@ from src.backtest.engine import calc_exit_proceeds
 from src.config import AppConfig
 from src.data import fetch_ohlcv
 from src.exchange.hyperliquid_client import create_public_exchange
-from src.notifications import TelegramNotifier
+from src.notifications import NtfyNotifier
 from src.strategy import TrendScalperStrategy
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import Log, setup_logging
@@ -42,7 +42,7 @@ class PaperTrader:
         self.timeframe = timeframe
         self.strategy = TrendScalperStrategy(config.strategy_for_timeframe(timeframe))
         self.fees = config.exchange.fees
-        self.notifier = TelegramNotifier(config.telegram)
+        self.notifier = NtfyNotifier(config.notifications)
         self.state = PaperState(balance=config.paper.initial_balance)
         self._public_exchange = create_public_exchange(
             config.exchange.id,

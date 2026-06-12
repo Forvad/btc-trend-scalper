@@ -16,7 +16,7 @@ from src.config import load_config
 from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
 from src.data import fetch_ohlcv, fetch_ohlcv_max
 from src.live import LiveTrader, run_test_orders
-from src.notifications import TelegramNotifier
+from src.notifications import NtfyNotifier
 from src.paper import PaperTrader
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import app_log, setup_logging
@@ -228,7 +228,7 @@ def run_backtest(
 
 def run_paper(timeframe: str, config_path: str) -> None:
     config = load_config(config_path)
-    notifier = TelegramNotifier(config.telegram)
+    notifier = NtfyNotifier(config.notifications)
     try:
         trader = PaperTrader(config, timeframe=timeframe)
     except Exception as exc:
@@ -281,7 +281,7 @@ def run_live(timeframe: str, config_path: str, *, confirm: bool, dry_run: bool) 
     mode_label = "DRY-RUN" if dry_run else "LIVE (REAL MONEY)"
     app_log.section(f"{mode_label} | {config.symbol} | {timeframe}")
 
-    notifier = TelegramNotifier(config.telegram)
+    notifier = NtfyNotifier(config.notifications)
     mode = "DRY-RUN" if dry_run else "LIVE"
     try:
         trader = LiveTrader(config, timeframe=timeframe, dry_run=dry_run)

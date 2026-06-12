@@ -1,3 +1,3 @@
-from .telegram import TelegramNotifier
+from .ntfy import NtfyNotifier
 
-__all__ = ["TelegramNotifier"]
+__all__ = ["NtfyNotifier"]

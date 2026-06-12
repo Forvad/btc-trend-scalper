@@ -10,7 +10,7 @@ from src.exchange.hyperliquid_client import (
     fetch_account_balances,
     has_credentials,
 )
-from src.notifications import TelegramNotifier
+from src.notifications import NtfyNotifier
 from src.utils.log import Log
 
 TestSide = Literal["long", "short", "both"]
@@ -35,7 +35,7 @@ class LiveOrderTester:
         self.config = config
         self.symbol = config.symbol
         self.live = config.live
-        self.notifier = TelegramNotifier(config.telegram)
+        self.notifier = NtfyNotifier(config.notifications)
         self.exchange = create_hyperliquid_exchange(timeout_sec=self.live.api_timeout_sec)
         self.log = Log("TEST")
 

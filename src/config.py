@@ -204,11 +204,15 @@ class PaperConfig:
 
 
 @dataclass
-class TelegramConfig:
+class NotificationsConfig:
     enabled: bool = True
     notify_on_start: bool = True
     notify_on_trade: bool = True
     notify_on_error: bool = True
+
+
+# обратная совместимость
+TelegramConfig = NotificationsConfig
 
 
 @dataclass
@@ -245,7 +249,7 @@ class AppConfig:
     backtest: BacktestConfig = None
     paper: PaperConfig = None
     live: LiveConfig = None
-    telegram: TelegramConfig = None
+    notifications: NotificationsConfig = None
 
     def __post_init__(self) -> None:
         if self.exchange is None:
@@ -266,8 +270,8 @@ class AppConfig:
             self.paper = PaperConfig()
         if self.live is None:
             self.live = LiveConfig()
-        if self.telegram is None:
-            self.telegram = TelegramConfig()
+        if self.notifications is None:
+            self.notifications = NotificationsConfig()
 
     @property
     def symbol(self) -> str:
@@ -370,7 +374,7 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
     bt = raw.get("backtest", {})
     pp = raw.get("paper", {})
     lv = raw.get("live", {})
-    tg = raw.get("telegram", {})
+    notify_raw = raw.get("notifications") or raw.get("telegram", {})
     hy = raw.get("hybrid", {})
 
     fee_preset = ex.get("fee_preset", "hyperliquid")
@@ -399,5 +403,5 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         backtest=BacktestConfig(**bt),
         paper=PaperConfig(**pp),
         live=LiveConfig(**lv),
-        telegram=TelegramConfig(**tg) if tg else TelegramConfig(),
+        notifications=NotificationsConfig(**notify_raw) if notify_raw else NotificationsConfig(),
     )

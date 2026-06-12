@@ -8,8 +8,8 @@
 |------|------------|
 | `Dockerfile` | Образ Python 3.12 + зависимости |
 | `docker-compose.yml` | Сервис `bot` (live), профили `dry` и `tools` |
-| `.env` | Ключи Hyperliquid и Telegram (**не в git**) |
-| `config.yaml` | Стратегия, live, telegram (монтируется в контейнер) |
+| `.env` | Ключи Hyperliquid и ntfy-топик (**не в git**) |
+| `config.yaml` | Стратегия, live, notifications (монтируется в контейнер) |
 
 ## 1. Подготовка VPS
 
@@ -84,8 +84,7 @@ nano .env
 ```env
 HYPERLIQUID_PRIVATE_KEY=0x...
 HYPERLIQUID_WALLET_ADDRESS=0x...   # основной аккаунт с USDC, не API wallet
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
+NTFY_TOPIC=ваш_логин_из_приложения_ntfy
 ```
 
 Права на `.env`:
@@ -165,7 +164,8 @@ docker compose restart bot
 
 | Симптом | Решение |
 |---------|---------|
-| Баланс $0 в Telegram | Неверный `HYPERLIQUID_WALLET_ADDRESS` (нужен master, не API wallet) |
+| Баланс $0 в уведомлении | Неверный `HYPERLIQUID_WALLET_ADDRESS` (нужен master, не API wallet) |
+| Нет push от ntfy | Пустой `NTFY_TOPIC` или топик не подписан в приложении ntfy |
 | Контейнер падает сразу | `docker compose logs bot` — часто пустой `.env` |
 | Нет логов в `logs/` | Папка создаётся при старте; проверьте volume в compose |
 | Сменить TF без правки compose | `docker compose run --rm bot live -t 15m --confirm-live` (разовый запуск) |

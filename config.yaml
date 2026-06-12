@@ -137,7 +137,7 @@ live:
   tick_timeout_sec: 90
   heartbeat_interval_sec: 1800
 
-telegram:
+notifications:
   enabled: true
   notify_on_start: true
   notify_on_trade: true
