@@ -5,6 +5,8 @@ import time
 import ccxt
 import pandas as pd
 
+from src.utils.network import call_with_retries
+
 # Hyperliquid отдаёт не более 5000 свечей за запрос
 MAX_BATCH_SIZE = 5000
 
@@ -37,7 +39,9 @@ def fetch_ohlcv(
 
     while remaining > 0:
         batch_limit = min(remaining, MAX_BATCH_SIZE)
-        candles = exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=batch_limit)
+        candles = call_with_retries(
+            lambda: exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=batch_limit)
+        )
         if not candles:
             break
 
