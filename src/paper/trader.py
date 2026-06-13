@@ -14,6 +14,7 @@ from src.strategy import TrendScalperStrategy
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import Log, setup_logging
 from src.utils.runtime import call_with_timeout
+from src.utils.network import is_transient_network_error
 
 PositionSide = Literal["long", "short"]
 
@@ -77,6 +78,13 @@ class PaperTrader:
             exc=exc,
             context=context,
         )
+
+    def _handle_tick_failure(self, exc: BaseException, *, context: str) -> None:
+        if is_transient_network_error(exc) or isinstance(exc, TimeoutError):
+            self._log(f"WARN: {context}: {exc} — retry next tick")
+            self._reconnect_public_exchange()
+            return
+        self._report_error(exc, context=context)
 
     def _equity(self, price: float) -> float:
         equity = self.state.balance
@@ -261,10 +269,9 @@ class PaperTrader:
                         f"Position={side} | tick={elapsed:.1f}s"
                     )
                 except TimeoutError as exc:
-                    self._report_error(exc, context="tick timeout")
-                    self._reconnect_public_exchange()
+                    self._handle_tick_failure(exc, context="tick timeout")
                 except Exception as exc:
-                    self._report_error(exc, context="tick")
+                    self._handle_tick_failure(exc, context="tick")
                 self._maybe_heartbeat()
                 time.sleep(self.config.paper.poll_interval_sec)
         except Exception as exc:

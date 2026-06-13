@@ -111,6 +111,13 @@ class LiveTrader:
             context=context,
         )
 
+    def _handle_tick_failure(self, exc: BaseException, *, context: str) -> None:
+        if is_transient_network_error(exc) or isinstance(exc, TimeoutError):
+            self._log(f"WARN: {context}: {exc} — retry next tick")
+            self._reconnect_exchange()
+            return
+        self._report_error(exc, context=context)
+
     def _get_balances(self) -> tuple[float, float]:
         if self.dry_run and not has_credentials():
             return 10_000.0, 10_000.0
@@ -655,10 +662,9 @@ class LiveTrader:
                         f"Action={status['action']} | tick={elapsed:.1f}s"
                     )
                 except TimeoutError as exc:
-                    self._report_error(exc, context="tick timeout")
-                    self._reconnect_exchange()
+                    self._handle_tick_failure(exc, context="tick timeout")
                 except Exception as exc:
-                    self._report_error(exc, context="tick")
+                    self._handle_tick_failure(exc, context="tick")
                 self._maybe_heartbeat()
                 time.sleep(self.live.poll_interval_sec)
         except Exception as exc:

@@ -134,7 +134,7 @@ live:
   slippage: 0.005
   min_notional_usd: 50
   max_notional_usd: 200
-  api_timeout_sec: 30
+  api_timeout_sec: 60
   tick_timeout_sec: 90
   heartbeat_interval_sec: 1800
 
