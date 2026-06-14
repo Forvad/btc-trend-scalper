@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from tabulate import tabulate
@@ -20,6 +21,7 @@ from src.notifications import NtfyNotifier
 from src.paper import PaperTrader
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import app_log, setup_logging
+from src.utils.network import is_transient_network_error
 
 
 def run_backtest(
@@ -283,17 +285,30 @@ def run_live(timeframe: str, config_path: str, *, confirm: bool, dry_run: bool) 
 
     notifier = NtfyNotifier(config.notifications)
     mode = "DRY-RUN" if dry_run else "LIVE"
-    try:
-        trader = LiveTrader(config, timeframe=timeframe, dry_run=dry_run)
-    except Exception as exc:
-        notifier.notify_exception(
-            mode=mode,
-            symbol=config.symbol,
-            timeframe=timeframe,
-            exc=exc,
-            context="init",
-        )
-        raise
+
+    trader: LiveTrader | None = None
+    retry_delay_sec = 10.0
+    while trader is None:
+        try:
+            trader = LiveTrader(config, timeframe=timeframe, dry_run=dry_run)
+        except Exception as exc:
+            if is_transient_network_error(exc):
+                app_log.warning(
+                    f"Hyperliquid API unavailable at startup ({exc}) — "
+                    f"retry in {retry_delay_sec:.0f}s"
+                )
+                time.sleep(retry_delay_sec)
+                retry_delay_sec = min(retry_delay_sec * 1.5, 120.0)
+                continue
+            notifier.notify_exception(
+                mode=mode,
+                symbol=config.symbol,
+                timeframe=timeframe,
+                exc=exc,
+                context="init",
+            )
+            raise
+
     trader.run()
 
 

@@ -5,6 +5,12 @@ import os
 import ccxt
 from dotenv import load_dotenv
 
+from src.utils.network import call_with_retries
+
+
+def _load_markets(exchange: ccxt.Exchange) -> None:
+    call_with_retries(exchange.load_markets, attempts=5, delay_sec=3.0)
+
 
 def has_credentials() -> bool:
     load_dotenv()
@@ -31,7 +37,7 @@ def create_hyperliquid_exchange(
                 "Задайте HYPERLIQUID_PRIVATE_KEY и HYPERLIQUID_WALLET_ADDRESS в файле .env"
             )
         exchange = ccxt.hyperliquid(common)
-        exchange.load_markets()
+        _load_markets(exchange)
         return exchange
 
     exchange = ccxt.hyperliquid(
@@ -41,14 +47,14 @@ def create_hyperliquid_exchange(
             "privateKey": private_key,
         }
     )
-    exchange.load_markets()
+    _load_markets(exchange)
     return exchange
 
 
 def create_public_exchange(exchange_id: str = "hyperliquid", *, timeout_sec: int = 30) -> ccxt.Exchange:
     exchange_class = getattr(ccxt, exchange_id)
     exchange = exchange_class({"enableRateLimit": True, "timeout": timeout_sec * 1000})
-    exchange.load_markets()
+    _load_markets(exchange)
     return exchange
 
 
