@@ -481,13 +481,26 @@ class LiveTrader:
         bracket = None
         if self.live.place_bracket_orders:
             mark = price if self.dry_run and not has_credentials() else self._reference_price()
-            sl_valid, stop_raw, tp_raw = is_bracket_sl_valid(side, signal, mark)
+            sl_valid, stop_raw, tp_raw, sl_dist = is_bracket_sl_valid(
+                side,
+                signal,
+                mark,
+                min_sl_distance_pct=self.live.min_sl_distance_pct,
+            )
             if not sl_valid:
                 need = "выше" if side == "short" else "ниже"
-                self._log(
-                    f"SKIP {label}: SL невалиден — supertrend={stop_raw:.4f} "
-                    f"должен быть {need} mark={mark:.4f} (tp_band={tp_raw:.4f})"
-                )
+                stop_price, _ = validate_bracket(side, mark, stop_raw, tp_raw)
+                if stop_price is None:
+                    self._log(
+                        f"SKIP {label}: SL невалиден — supertrend={stop_raw:.4f} "
+                        f"должен быть {need} mark={mark:.4f} (tp_band={tp_raw:.4f})"
+                    )
+                else:
+                    self._log(
+                        f"SKIP {label}: SL слишком близко — dist={sl_dist:.2f}% "
+                        f"< min {self.live.min_sl_distance_pct:.2f}% "
+                        f"(supertrend={stop_raw:.4f}, mark={mark:.4f})"
+                    )
                 return False
             bracket = build_bracket_params(self.exchange, self.symbol, side, signal, mark)
             stop_ok, tp_ok = validate_bracket(side, mark, stop_raw, tp_raw)

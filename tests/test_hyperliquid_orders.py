@@ -30,14 +30,30 @@ def test_validate_bracket_short() -> None:
 
 def test_is_bracket_sl_valid_short() -> None:
     signal = {"supertrend": 72.31, "bb_upper": 80.0, "bb_lower": 66.5}
-    assert is_bracket_sl_valid("short", signal, 73.0) == (False, 72.31, 66.5)
-    assert is_bracket_sl_valid("short", signal, 71.0) == (True, 72.31, 66.5)
+    assert is_bracket_sl_valid("short", signal, 73.0)[:3] == (False, 72.31, 66.5)
+    assert is_bracket_sl_valid("short", signal, 71.0)[:3] == (True, 72.31, 66.5)
+    # 72.5 vs 71.0 = ~2.1% — ок при min 1%
+    assert is_bracket_sl_valid("short", signal, 71.0, min_sl_distance_pct=1.0)[0] is True
+    # 71.5 vs 71.0 = ~0.7% — слишком близко
+    tight = {"supertrend": 71.5, "bb_upper": 80.0, "bb_lower": 66.5}
+    valid, _, _, dist = is_bracket_sl_valid("short", tight, 71.0, min_sl_distance_pct=1.0)
+    assert valid is False
+    assert dist == pytest.approx(0.704, rel=1e-2)
+
+
+def test_sl_distance_pct() -> None:
+    from src.live.hyperliquid_orders import sl_distance_pct
+
+    assert sl_distance_pct("long", 100.0, 98.0) == pytest.approx(2.0)
+    assert sl_distance_pct("short", 100.0, 101.5) == pytest.approx(1.5)
 
 
 def test_is_bracket_sl_valid_long() -> None:
     signal = {"supertrend": 95.0, "bb_upper": 110.0, "bb_lower": 90.0}
-    assert is_bracket_sl_valid("long", signal, 100.0) == (True, 95.0, 110.0)
-    assert is_bracket_sl_valid("long", signal, 94.0) == (False, 95.0, 110.0)
+    assert is_bracket_sl_valid("long", signal, 100.0)[:3] == (True, 95.0, 110.0)
+    assert is_bracket_sl_valid("long", signal, 94.0)[:3] == (False, 95.0, 110.0)
+    tight = {"supertrend": 99.5, "bb_upper": 110.0, "bb_lower": 90.0}
+    assert is_bracket_sl_valid("long", tight, 100.0, min_sl_distance_pct=1.0)[0] is False
 
 
 def test_bracket_levels_long() -> None:

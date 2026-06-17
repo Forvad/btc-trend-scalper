@@ -95,15 +95,37 @@ def validate_bracket(
     return (stop_price if stop_ok else None, tp_price if tp_ok else None)
 
 
+def sl_distance_pct(side: PositionSide, entry_price: float, stop_price: float) -> float:
+    """Расстояние SL от цены входа в % (положительное, если SL на нужной стороне)."""
+    if entry_price <= 0:
+        return 0.0
+    if side == "long":
+        return (entry_price - stop_price) / entry_price * 100.0
+    return (stop_price - entry_price) / entry_price * 100.0
+
+
 def is_bracket_sl_valid(
     side: PositionSide,
     signal: dict,
     mark_price: float,
-) -> tuple[bool, float, float]:
-    """SL (supertrend) должен быть по правильную сторону от mark для bracket на бирже."""
+    *,
+    min_sl_distance_pct: float = 0.0,
+) -> tuple[bool, float, float, float]:
+    """
+    SL (supertrend) должен быть по правильную сторону от mark
+    и не ближе min_sl_distance_pct к цене входа.
+    Возвращает (valid, stop_raw, tp_raw, distance_pct).
+    """
     stop_raw, tp_raw = bracket_levels(side, signal)
     stop_price, _ = validate_bracket(side, mark_price, stop_raw, tp_raw)
-    return stop_price is not None, stop_raw, tp_raw
+    if stop_price is None:
+        return False, stop_raw, tp_raw, 0.0
+
+    distance = sl_distance_pct(side, mark_price, stop_price)
+    if min_sl_distance_pct > 0 and distance < min_sl_distance_pct:
+        return False, stop_raw, tp_raw, distance
+
+    return True, stop_raw, tp_raw, distance
 
 
 def bracket_price_key(bracket: dict) -> tuple[float | None, float | None]:

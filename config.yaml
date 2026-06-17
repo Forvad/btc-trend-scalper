@@ -141,6 +141,7 @@ live:
   trade_analytics_enabled: true
   trade_analytics_days: 30
   trade_analytics_interval_sec: 0  # только при старте; 21600 = каждые 6ч в heartbeat
+  min_sl_distance_pct: 1.0        # не входить, если SL ближе 1% к цене
 
 notifications:
   enabled: true

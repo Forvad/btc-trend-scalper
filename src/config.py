@@ -249,6 +249,7 @@ class LiveConfig:
     trade_analytics_enabled: bool = True
     trade_analytics_days: int = 30
     trade_analytics_interval_sec: int = 0  # 0 — только при старте; >0 — повтор в heartbeat
+    min_sl_distance_pct: float = 1.0  # мин. дистанция SL от цены входа (%)
 
 
 @dataclass
