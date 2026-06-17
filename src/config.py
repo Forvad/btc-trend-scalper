@@ -246,6 +246,9 @@ class LiveConfig:
     api_timeout_sec: int = 30
     tick_timeout_sec: int = 90
     heartbeat_interval_sec: int = 900
+    trade_analytics_enabled: bool = True
+    trade_analytics_days: int = 30
+    trade_analytics_interval_sec: int = 0  # 0 — только при старте; >0 — повтор в heartbeat
 
 
 @dataclass

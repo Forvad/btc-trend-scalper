@@ -95,6 +95,17 @@ def validate_bracket(
     return (stop_price if stop_ok else None, tp_price if tp_ok else None)
 
 
+def is_bracket_sl_valid(
+    side: PositionSide,
+    signal: dict,
+    mark_price: float,
+) -> tuple[bool, float, float]:
+    """SL (supertrend) должен быть по правильную сторону от mark для bracket на бирже."""
+    stop_raw, tp_raw = bracket_levels(side, signal)
+    stop_price, _ = validate_bracket(side, mark_price, stop_raw, tp_raw)
+    return stop_price is not None, stop_raw, tp_raw
+
+
 def bracket_price_key(bracket: dict) -> tuple[float | None, float | None]:
     sl = float(bracket["stopLoss"]["triggerPrice"]) if "stopLoss" in bracket else None
     tp = float(bracket["takeProfit"]["triggerPrice"]) if "takeProfit" in bracket else None
@@ -142,9 +153,9 @@ def should_update_bracket_leg(
     tick_size: float = 0.0,
 ) -> bool:
     """Нужно ли обновлять ногу bracket. Для TP — порог % или N тиков (ИЛИ)."""
-    if old_price is None and new_price is None:
+    if new_price is None:
         return False
-    if old_price is None or new_price is None:
+    if old_price is None:
         return True
     if old_price == new_price:
         return False

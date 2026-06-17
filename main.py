@@ -318,8 +318,8 @@ def main() -> None:
     )
     parser.add_argument(
         "mode",
-        choices=["backtest", "paper", "live", "compare", "compare-bots", "compare-hybrid", "test-orders"],
-        help="Режим: backtest, compare-bots, paper, live, test-orders",
+        choices=["backtest", "paper", "live", "live-analytics", "compare", "compare-bots", "compare-hybrid", "test-orders"],
+        help="Режим: backtest, live-analytics, compare-bots, paper, live, test-orders",
     )
     parser.add_argument(
         "--timeframe",
@@ -366,6 +366,12 @@ def main() -> None:
         default="trend",
         help="Какой бот бэктестить: trend (скальпер) или range (флэт BB+RSI)",
     )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=None,
+        help="Период аналитики сделок с биржи (дней); по умолчанию live.trade_analytics_days",
+    )
     args = parser.parse_args()
     setup_logging()
     config = load_config(args.config)
@@ -384,6 +390,10 @@ def main() -> None:
         run_hybrid_compare(load_config(args.config), max_history=args.max)
     elif args.mode == "live":
         run_live(timeframe, args.config, confirm=args.confirm_live, dry_run=args.dry_run)
+    elif args.mode == "live-analytics":
+        from src.live.analytics_runner import run_live_trade_analytics
+
+        print(run_live_trade_analytics(config, lookback_days=args.days))
     elif args.mode == "test-orders":
         run_test_orders_cli(args.config, confirm=args.confirm_test, side=args.side)
     else:

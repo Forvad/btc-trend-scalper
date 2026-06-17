@@ -110,3 +110,34 @@ def test_calc_order_amount_without_leverage_sizing(_mock_bal, _mock_hl, _mock_pu
 
     amount = trader._calc_order_amount(50.0)
     assert amount == pytest.approx(105.0 * 0.95 / 50.0)
+
+
+@patch("src.live.trader.fetch_ohlcv")
+@patch("src.live.trader.create_public_exchange")
+@patch("src.live.trader.create_hyperliquid_exchange")
+def test_tick_skips_short_entry_when_sl_invalid(_mock_hl, _mock_pub, mock_fetch) -> None:
+    config = AppConfig()
+    config.exchange = ExchangeConfig(symbol="HYPE/USDC:USDC")
+    config.live = LiveConfig(place_bracket_orders=True)
+    trader = LiveTrader(config, timeframe="1h", dry_run=True)
+    trader.exchange = MagicMock()
+
+    signal = {
+        "timestamp": None,
+        "close": 73.0,
+        "long_signal": False,
+        "short_signal": True,
+        "supertrend": 72.31,
+        "bb_upper": 80.0,
+        "bb_lower": 66.5,
+    }
+    mock_fetch.return_value = MagicMock()
+    trader._fetch_htf = MagicMock(return_value=None)
+    trader.strategy.latest_signal = MagicMock(return_value=signal)
+    trader._get_exchange_position = MagicMock(return_value=None)
+    trader._open_position = MagicMock(return_value=False)
+
+    result = trader.tick()
+
+    trader._open_position.assert_called_once_with("short", signal)
+    assert result["action"] == "hold"

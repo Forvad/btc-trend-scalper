@@ -1,10 +1,8 @@
-bot: trend  # trend | range
-# HYPE — основной live-конфиг. Другие монеты: configs/config-{btc,eth,sui,zec}.yaml
+bot: trend
 default_timeframe: 1h
-
 exchange:
   id: hyperliquid
-  symbol: HYPE/USDC:USDC
+  symbol: SUI/USDC:USDC
   fee_preset: hyperliquid
   fees:
     maker_pct: 0.015
@@ -12,13 +10,11 @@ exchange:
     entry: taker
     exit_stop: taker
     exit_tp: maker
-
 timeframes:
-  - 15m
-  - 1h
-  - 4h
-  - 1d
-
+- 15m
+- 1h
+- 4h
+- 1d
 strategy:
   ema_fast: 9
   ema_slow: 21
@@ -33,42 +29,23 @@ strategy:
     enabled: false
   trail_sl:
     enabled: true
-    trail_start_at_pct: 1.5  # до +1.5% — чистый supertrend (как bracket SL)
+    trail_start_at_pct: 1.5
     breakeven_at_pct: 0
     trail_step_pct: 0.3
-    take_profit_bb: true       # TP по BB + trail SL
-
+    take_profit_bb: true
 strategy_by_timeframe:
   15m:
     supertrend:
       period: 10
       multiplier: 4.0
-    volume_sma_period: 14
   1h:
-    ema_fast: 9
-    ema_slow: 21
-    supertrend:
-      period: 10
-      multiplier: 2.5
-    bollinger:
-      period: 20
-      std_dev: 2.5
-    volume_sma_period: 20
-    enhancements:
-      enabled: false
-  4h:
-    supertrend:
-      period: 7
-      multiplier: 2.5
-    volume_sma_period: 14
-  1d:
-    ema_fast: 12
-    ema_slow: 26
     supertrend:
       period: 10
       multiplier: 3.5
-    volume_sma_period: 20
-
+  1d:
+    supertrend:
+      period: 10
+      multiplier: 4.0
 range_strategy:
   bollinger:
     period: 20
@@ -86,7 +63,7 @@ range_strategy:
   use_swing_stop: true
   swing_lookback: 5
   swing_buffer_pct: 0.15
-  entry_mode: bounce  # bounce (подтверждение) | touch (агрессивный, лучше на 4h)
+  entry_mode: bounce
   take_profit: middle_first
   max_bb_width_pct: 0
   min_reward_to_middle_pct: 0.25
@@ -102,34 +79,30 @@ range_strategy:
     lookback: 100
     pivot_window: 3
     cluster_pct: 0.5
-
 hybrid:
   trend_adx_min: 24
   range_adx_max: 22
   trend_always: true
-
 backtest:
   initial_balance: 100.0
   position_size_pct: 0.95
   candles_limit: 1000
   live_like: true
   intrabar_timeframe: 5m
-
 paper:
   poll_interval_sec: 60
   initial_balance: 100.0
   position_size_pct: 0.95
-
 live:
   poll_interval_sec: 60
   position_size_pct: 0.95
-  use_leverage_for_sizing: true  # номинал ≈ balance × leverage × 95% (до max_notional_usd)
+  use_leverage_for_sizing: true
   place_bracket_orders: true
   update_bracket_orders: true
-  bracket_update_every_ticks: 5   # ~5 мин при poll 60s — как 5m intrabar в бэктесте
-  bracket_tp_min_change_pct: 0.15 # ~$0.09 на HYPE ~60; BB сдвинулась на 0.2%+ → обновить TP
-  bracket_tp_min_change_ticks: 3  # запасной порог: 3 тика (~$0.03)
-  bracket_tp_mode: dynamic        # long: TP следует за bb_upper вверх (как take_profit_bb в бэктесте)
+  bracket_update_every_ticks: 5
+  bracket_tp_min_change_pct: 0.2
+  bracket_tp_min_change_ticks: 3
+  bracket_tp_mode: dynamic
   leverage: 2
   margin_mode: cross
   slippage: 0.005
@@ -140,8 +113,7 @@ live:
   heartbeat_interval_sec: 1800
   trade_analytics_enabled: true
   trade_analytics_days: 30
-  trade_analytics_interval_sec: 0  # только при старте; 21600 = каждые 6ч в heartbeat
-
+  trade_analytics_interval_sec: 0
 notifications:
   enabled: true
   notify_on_start: true

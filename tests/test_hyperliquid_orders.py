@@ -9,6 +9,7 @@ from src.live.hyperliquid_orders import (
     bracket_levels,
     build_bracket_params,
     close_order_side,
+    is_bracket_sl_valid,
     is_stop_loss_order,
     is_take_profit_order,
     merge_bracket_prices,
@@ -19,6 +20,24 @@ from src.live.hyperliquid_orders import (
     should_update_bracket_leg,
     validate_bracket,
 )
+
+
+def test_validate_bracket_short() -> None:
+    sl, tp = validate_bracket("short", 73.0, 72.31, 66.5)
+    assert sl is None
+    assert tp == 66.5
+
+
+def test_is_bracket_sl_valid_short() -> None:
+    signal = {"supertrend": 72.31, "bb_upper": 80.0, "bb_lower": 66.5}
+    assert is_bracket_sl_valid("short", signal, 73.0) == (False, 72.31, 66.5)
+    assert is_bracket_sl_valid("short", signal, 71.0) == (True, 72.31, 66.5)
+
+
+def test_is_bracket_sl_valid_long() -> None:
+    signal = {"supertrend": 95.0, "bb_upper": 110.0, "bb_lower": 90.0}
+    assert is_bracket_sl_valid("long", signal, 100.0) == (True, 95.0, 110.0)
+    assert is_bracket_sl_valid("long", signal, 94.0) == (False, 95.0, 110.0)
 
 
 def test_bracket_levels_long() -> None:
@@ -167,7 +186,27 @@ def test_bracket_legs_to_update() -> None:
     assert update_tp is True
 
 
-def test_merge_bracket_prices_partial() -> None:
+def test_bracket_sl_none_keeps_existing_on_update() -> None:
+    """SHORT: supertrend ниже mark → new_sl=None, старый SL на бирже не трогаем."""
+    update_sl, update_tp = bracket_legs_to_update(
+        "short",
+        74.0,
+        66.0,
+        None,
+        66.5,
+        reason="update",
+        min_tp_change_pct=0.15,
+        min_tp_change_ticks=3,
+        tick_size=0.001,
+        tp_mode="dynamic",
+    )
+    assert update_sl is False
+    assert update_tp is True
+
+
+def test_should_update_bracket_leg_rejects_none_candidate() -> None:
+    assert should_update_bracket_leg("sl", 72.0, None) is False
+    assert should_update_bracket_leg("sl", None, 72.0) is True
     merged = merge_bracket_prices(
         (95.0, 110.0),
         {"takeProfit": {"triggerPrice": 112.0}},

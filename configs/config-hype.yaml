@@ -1,5 +1,4 @@
 bot: trend  # trend | range
-# HYPE — основной live-конфиг. Другие монеты: configs/config-{btc,eth,sui,zec}.yaml
 default_timeframe: 1h
 
 exchange:

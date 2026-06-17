@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from src.strategy.exits import smart_tp_valid
+from src.live.analytics_runner import log_live_trade_analytics
 from src.config import AppConfig
 from src.live.hyperliquid_orders import (
     bracket_legs_to_update,
@@ -21,6 +22,7 @@ from src.live.hyperliquid_orders import (
     reference_price,
     round_amount,
     should_refresh_bracket,
+    is_bracket_sl_valid,
     validate_bracket,
 )
 from src.data import fetch_ohlcv
@@ -59,6 +61,7 @@ class LiveTrader:
         self.live = config.live
         self.notifier = NtfyNotifier(config.notifications)
         self._last_heartbeat = time.monotonic()
+        self._last_trade_analytics = 0.0
         self._position_tick_count = 0
         self._last_bracket_prices: tuple[float | None, float | None] | None = None
         auth_required = not dry_run or has_credentials()
@@ -96,6 +99,17 @@ class LiveTrader:
             return
         self._last_heartbeat = now
         self._log("HEARTBEAT — bot is running")
+        self._maybe_trade_analytics()
+
+    def _maybe_trade_analytics(self, *, force: bool = False) -> None:
+        interval = self.live.trade_analytics_interval_sec
+        if not force:
+            if interval <= 0:
+                return
+            if time.monotonic() - self._last_trade_analytics < interval:
+                return
+        self._last_trade_analytics = time.monotonic()
+        log_live_trade_analytics(self.config, self._log, dry_run=self.dry_run)
 
     @property
     def _mode_label(self) -> str:
@@ -391,8 +405,8 @@ class LiveTrader:
         if update_tp:
             legs.append(f"TP={new_tp}")
         self._log(
-            f"Bracket {reason}: обновление {', '.join(legs)} "
-            f"(supertrend={stop_raw:.4f}, bb={tp_raw:.4f}, mark={mark:.4f})"
+            f"Bracket {reason}: обновление {', '.join(legs) or 'нет'} "
+            f"(кандидаты SL={new_sl} TP={new_tp}, supertrend={stop_raw:.4f}, bb={tp_raw:.4f}, mark={mark:.4f})"
         )
 
         if not self.dry_run:
@@ -458,7 +472,7 @@ class LiveTrader:
             params={"reduceOnly": True, "postOnly": True},
         )
 
-    def _open_position(self, side: PositionSide, signal: dict) -> None:
+    def _open_position(self, side: PositionSide, signal: dict) -> bool:
         price = signal["close"]
         amount = self._calc_order_amount(price)
         order_side = "buy" if side == "long" else "sell"
@@ -467,8 +481,15 @@ class LiveTrader:
         bracket = None
         if self.live.place_bracket_orders:
             mark = price if self.dry_run and not has_credentials() else self._reference_price()
+            sl_valid, stop_raw, tp_raw = is_bracket_sl_valid(side, signal, mark)
+            if not sl_valid:
+                need = "выше" if side == "short" else "ниже"
+                self._log(
+                    f"SKIP {label}: SL невалиден — supertrend={stop_raw:.4f} "
+                    f"должен быть {need} mark={mark:.4f} (tp_band={tp_raw:.4f})"
+                )
+                return False
             bracket = build_bracket_params(self.exchange, self.symbol, side, signal, mark)
-            stop_raw, tp_raw = bracket_levels(side, signal)
             stop_ok, tp_ok = validate_bracket(side, mark, stop_raw, tp_raw)
             self._log(
                 f"Bracket plan: SL={stop_ok} TP={tp_ok} "
@@ -498,6 +519,7 @@ class LiveTrader:
             balance_usd=free,
             equity_usd=equity,
         )
+        return True
 
     def _close_position(
         self,
@@ -602,11 +624,11 @@ class LiveTrader:
             self._position_tick_count = 0
             self._last_bracket_prices = None
             if signal["long_signal"]:
-                self._open_position("long", signal)
-                action = "open_long"
+                if self._open_position("long", signal):
+                    action = "open_long"
             elif signal["short_signal"]:
-                self._open_position("short", signal)
-                action = "open_short"
+                if self._open_position("short", signal):
+                    action = "open_short"
         else:
             if self.live.place_bracket_orders:
                 bracket_action = self._manage_bracket_orders(pos, signal)
@@ -641,6 +663,8 @@ class LiveTrader:
             free, equity = self._get_balances()
             if not self.dry_run:
                 self._log(f"Available USDC: ${free:.2f} | Equity: ${equity:.2f}")
+
+            self._maybe_trade_analytics(force=True)
 
             self.notifier.notify_bot_started(
                 mode=mode,
