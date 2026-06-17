@@ -487,6 +487,12 @@ class LiveTrader:
                 mark,
                 min_sl_distance_pct=self.live.min_sl_distance_pct,
             )
+            if signal.get("overheated") and side == "long":
+                self._log(
+                    f"SKIP {label}: перегрев — рост {signal.get('momentum_rise_pct', 0):.1f}% "
+                    f"за {self.strategy.config.momentum_filter.lookback_bars} бар(ов)"
+                )
+                return False
             if not sl_valid:
                 need = "выше" if side == "short" else "ниже"
                 stop_price, _ = validate_bracket(side, mark, stop_raw, tp_raw)

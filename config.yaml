@@ -37,6 +37,10 @@ strategy:
     breakeven_at_pct: 0
     trail_step_pct: 0.3
     take_profit_bb: true       # TP по BB + trail SL
+  momentum_filter:
+    enabled: false
+    lookback_bars: 48
+    max_rise_pct: 12.0
 
 strategy_by_timeframe:
   15m:
@@ -56,6 +60,10 @@ strategy_by_timeframe:
     volume_sma_period: 20
     enhancements:
       enabled: false
+    momentum_filter:
+      enabled: true
+      lookback_bars: 48   # ~2 суток на 1h
+      max_rise_pct: 12.0  # блок long после пампа; short разрешены
   4h:
     supertrend:
       period: 7

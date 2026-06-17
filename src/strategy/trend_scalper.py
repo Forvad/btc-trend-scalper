@@ -4,6 +4,7 @@ import pandas as pd
 
 from src.config import StrategyConfig
 from src.strategy.htf import merge_htf_bias
+from src.strategy.momentum import overheated_mask, rise_pct
 from src.strategy.prepare import prepare_dataframe
 
 
@@ -60,6 +61,19 @@ class TrendScalperStrategy:
             long_signal &= data["htf_bull"].fillna(False)
             short_signal &= data["htf_bear"].fillna(False)
 
+        mf = self.config.momentum_filter
+        data["momentum_rise_pct"] = rise_pct(data["close"], mf.lookback_bars)
+        if mf.enabled and mf.lookback_bars > 0 and mf.max_rise_pct > 0:
+            hot = overheated_mask(
+                data["close"],
+                lookback_bars=mf.lookback_bars,
+                max_rise_pct=mf.max_rise_pct,
+            )
+            data["overheated"] = hot.fillna(False)
+            long_signal &= ~data["overheated"]
+        else:
+            data["overheated"] = False
+
         data["long_signal"] = long_signal
         data["short_signal"] = short_signal
 
@@ -96,6 +110,8 @@ class TrendScalperStrategy:
             "adx": float(last["adx"]) if "adx" in data.columns else None,
             "long_signal": bool(last["long_signal"]),
             "short_signal": bool(last["short_signal"]),
+            "overheated": bool(last.get("overheated", False)),
+            "momentum_rise_pct": float(last.get("momentum_rise_pct", 0.0) or 0.0),
             "long_exit_stop": bool(last["long_exit_stop"]),
             "long_exit_tp": bool(last["long_exit_tp"]),
             "short_exit_stop": bool(last["short_exit_stop"]),

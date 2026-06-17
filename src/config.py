@@ -163,6 +163,15 @@ class TrailSlConfig:
 
 
 @dataclass
+class MomentumFilterConfig:
+    """Блок long-входов после сильного роста; short остаются."""
+
+    enabled: bool = False
+    lookback_bars: int = 48  # на 1h ≈ 2 суток
+    max_rise_pct: float = 12.0  # рост за lookback → не открывать long
+
+
+@dataclass
 class StrategyConfig:
     ema_fast: int = 20
     ema_slow: int = 50
@@ -171,6 +180,7 @@ class StrategyConfig:
     volume_sma_period: int = 20
     enhancements: EnhancementConfig = None
     trail_sl: TrailSlConfig = None
+    momentum_filter: MomentumFilterConfig = None
 
     def __post_init__(self) -> None:
         if self.supertrend is None:
@@ -181,6 +191,8 @@ class StrategyConfig:
             self.enhancements = EnhancementConfig()
         if self.trail_sl is None:
             self.trail_sl = TrailSlConfig()
+        if self.momentum_filter is None:
+            self.momentum_filter = MomentumFilterConfig()
 
 
 @dataclass
@@ -354,10 +366,15 @@ def _load_strategy(st: dict, *, base: StrategyConfig | None = None) -> StrategyC
     st_cfg = st.get("supertrend")
     bb_cfg = st.get("bollinger")
     trail_raw = st.get("trail_sl")
+    mom_raw = st.get("momentum_filter")
     if trail_raw is not None:
         trail = TrailSlConfig(**dict(trail_raw))
     else:
         trail = copy.deepcopy(base.trail_sl)
+    if mom_raw is not None:
+        mom = MomentumFilterConfig(**dict(mom_raw))
+    else:
+        mom = copy.deepcopy(base.momentum_filter)
     return StrategyConfig(
         ema_fast=st.get("ema_fast", base.ema_fast),
         ema_slow=st.get("ema_slow", base.ema_slow),
@@ -366,6 +383,7 @@ def _load_strategy(st: dict, *, base: StrategyConfig | None = None) -> StrategyC
         volume_sma_period=st.get("volume_sma_period", base.volume_sma_period),
         enhancements=enh,
         trail_sl=trail,
+        momentum_filter=mom,
     )
 
 
