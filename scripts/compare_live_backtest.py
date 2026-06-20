@@ -13,7 +13,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from src.backtest import BacktestEngine
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.config import load_config
 from src.data import fetch_ohlcv_max
 from src.exchange.hyperliquid_client import create_hyperliquid_exchange, has_credentials
@@ -62,12 +62,10 @@ def main() -> None:
     intrabar_df = None
     if config.backtest.live_like:
         sub_tf = config.backtest.intrabar_timeframe
-        intrabar_df = fetch_intrabar_for_htf(
-            config.symbol,
+        intrabar_df = fetch_intrabar_for_backtest(
+            config,
             df,
             htf_timeframe=tf,
-            sub_timeframe=sub_tf,
-            exchange_id=config.exchange.id,
         )
         df, intrabar_df, align = prepare_live_like_data(
             df, intrabar_df, htf_timeframe=tf, sub_timeframe=sub_tf

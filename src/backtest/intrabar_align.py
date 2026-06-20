@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from src.backtest.live_like import bar_duration
 from src.data.fetcher import fetch_ohlcv_max, fetch_ohlcv_range
+
+if TYPE_CHECKING:
+    from src.config import AppConfig
 
 
 def intrabar_bars_per_htf(htf_timeframe: str, sub_timeframe: str) -> int:
@@ -116,6 +120,25 @@ def fetch_intrabar_for_htf(
             exchange_id=exchange_id,
         )
     return intrabar_df
+
+
+def fetch_intrabar_for_backtest(
+    config: AppConfig,
+    htf_df: pd.DataFrame,
+    *,
+    htf_timeframe: str,
+) -> pd.DataFrame:
+    """Intrabar для live-like: отдельная биржа/символ из backtest-конфига."""
+    sub_tf = config.backtest.intrabar_timeframe
+    exchange_id = config.intrabar_exchange_id()
+    symbol = config.intrabar_symbol()
+    return fetch_intrabar_for_htf(
+        symbol,
+        htf_df,
+        htf_timeframe=htf_timeframe,
+        sub_timeframe=sub_tf,
+        exchange_id=exchange_id,
+    )
 
 
 def prepare_live_like_data(

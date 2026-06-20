@@ -63,7 +63,12 @@ strategy_by_timeframe:
     momentum_filter:
       enabled: true
       lookback_bars: 48   # ~2 суток на 1h
-      max_rise_pct: 12.0  # блок long после пампа; short разрешены
+      max_rise_pct: 20  # блок long после пампа; short разрешены
+    adx_filter:
+      enabled: false
+      period: 14
+      min_for_entry: 22
+      require_rising: true   # вход только при росте ADX
   4h:
     supertrend:
       period: 7
@@ -122,6 +127,8 @@ backtest:
   candles_limit: 1000
   live_like: true
   intrabar_timeframe: 5m
+  intrabar_exchange: binance   # 5m с Binance; сигналы 1h/15m — Hyperliquid
+  # intrabar_symbol: HYPE/USDT:USDT  # опционально; по умолчанию из exchange.symbol
 
 paper:
   poll_interval_sec: 60

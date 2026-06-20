@@ -172,6 +172,16 @@ class MomentumFilterConfig:
 
 
 @dataclass
+class AdxFilterConfig:
+    """Блок входов при слабом тренде (низкий ADX ≈ боковик)."""
+
+    enabled: bool = False
+    period: int = 14
+    min_for_entry: float = 20.0
+    require_rising: bool = False  # не входить, пока ADX падает
+
+
+@dataclass
 class StrategyConfig:
     ema_fast: int = 20
     ema_slow: int = 50
@@ -181,6 +191,7 @@ class StrategyConfig:
     enhancements: EnhancementConfig = None
     trail_sl: TrailSlConfig = None
     momentum_filter: MomentumFilterConfig = None
+    adx_filter: AdxFilterConfig = None
 
     def __post_init__(self) -> None:
         if self.supertrend is None:
@@ -193,6 +204,8 @@ class StrategyConfig:
             self.trail_sl = TrailSlConfig()
         if self.momentum_filter is None:
             self.momentum_filter = MomentumFilterConfig()
+        if self.adx_filter is None:
+            self.adx_filter = AdxFilterConfig()
 
 
 @dataclass
@@ -214,6 +227,9 @@ class BacktestConfig:
     candles_limit: int = 1000
     live_like: bool = True
     intrabar_timeframe: str = "5m"
+    # Отдельный источник intrabar (напр. binance 5m при HTF с hyperliquid)
+    intrabar_exchange: str | None = None
+    intrabar_symbol: str | None = None
 
 
 @dataclass
@@ -308,6 +324,22 @@ class AppConfig:
     def strategy_for_timeframe(self, timeframe: str) -> StrategyConfig:
         return self.strategy_by_timeframe.get(timeframe, self.strategy)
 
+    def intrabar_exchange_id(self) -> str:
+        return self.backtest.intrabar_exchange or self.exchange.id
+
+    def intrabar_symbol(self) -> str:
+        if self.backtest.intrabar_symbol:
+            return self.backtest.intrabar_symbol
+        if self.intrabar_exchange_id() == self.exchange.id:
+            return self.exchange.symbol
+        return hyperliquid_to_usdt_perp(self.exchange.symbol)
+
+
+def hyperliquid_to_usdt_perp(symbol: str) -> str:
+    """HYPE/USDC:USDC → HYPE/USDT:USDT для Binance USDT-M perp."""
+    base = symbol.split("/")[0]
+    return f"{base}/USDT:USDT"
+
 
 def _load_fees(raw_fees: dict | None, preset: str) -> FeeConfig:
     base = get_fee_preset(preset)
@@ -367,6 +399,7 @@ def _load_strategy(st: dict, *, base: StrategyConfig | None = None) -> StrategyC
     bb_cfg = st.get("bollinger")
     trail_raw = st.get("trail_sl")
     mom_raw = st.get("momentum_filter")
+    adx_raw = st.get("adx_filter")
     if trail_raw is not None:
         trail = TrailSlConfig(**dict(trail_raw))
     else:
@@ -375,6 +408,10 @@ def _load_strategy(st: dict, *, base: StrategyConfig | None = None) -> StrategyC
         mom = MomentumFilterConfig(**dict(mom_raw))
     else:
         mom = copy.deepcopy(base.momentum_filter)
+    if adx_raw is not None:
+        adx_f = AdxFilterConfig(**dict(adx_raw))
+    else:
+        adx_f = copy.deepcopy(base.adx_filter)
     return StrategyConfig(
         ema_fast=st.get("ema_fast", base.ema_fast),
         ema_slow=st.get("ema_slow", base.ema_slow),
@@ -384,6 +421,7 @@ def _load_strategy(st: dict, *, base: StrategyConfig | None = None) -> StrategyC
         enhancements=enh,
         trail_sl=trail,
         momentum_filter=mom,
+        adx_filter=adx_f,
     )
 
 

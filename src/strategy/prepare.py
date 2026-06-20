@@ -17,6 +17,11 @@ def prepare_dataframe(df: pd.DataFrame, config: StrategyConfig) -> pd.DataFrame:
         std_dev=config.bollinger.std_dev,
     )
     result = add_volume_sma(result, config.volume_sma_period)
-    if config.enhancements.needs_adx():
-        result = add_adx(result, config.enhancements.adx_period)
+    adx_period = 14
+    if config.adx_filter.enabled:
+        adx_period = config.adx_filter.period
+    elif config.enhancements.needs_adx():
+        adx_period = config.enhancements.adx_period
+    if config.adx_filter.enabled or config.enhancements.needs_adx():
+        result = add_adx(result, adx_period)
     return result

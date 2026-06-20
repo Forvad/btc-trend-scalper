@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tabulate import tabulate
 
 from src.backtest.engine import BacktestEngine
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.config import MomentumFilterConfig, load_config
 from src.data import fetch_ohlcv_max
 
@@ -38,9 +38,7 @@ def main() -> None:
     intrabar = {}
     sub_tf = cfg.backtest.intrabar_timeframe
     for tf in tfs:
-        ib = fetch_intrabar_for_htf(
-            cfg.symbol, data[tf], htf_timeframe=tf, sub_timeframe=sub_tf, exchange_id=cfg.exchange.id
-        )
+        ib = fetch_intrabar_for_backtest(cfg, data[tf], htf_timeframe=tf)
         _, intrabar[tf], _ = prepare_live_like_data(data[tf], ib, htf_timeframe=tf, sub_timeframe=sub_tf)
 
     variants = [("OFF", MomentumFilterConfig(enabled=False))]

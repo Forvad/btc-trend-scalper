@@ -12,14 +12,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tabulate import tabulate
 
 from src.backtest.engine import BacktestEngine
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.config import MomentumFilterConfig, load_config
 from src.data import fetch_ohlcv_max
 
 tf = "1h"
 cfg = load_config()
 df = fetch_ohlcv_max(cfg.symbol, tf, cfg.exchange.id)
-ib = fetch_intrabar_for_htf(cfg.symbol, df, htf_timeframe=tf, sub_timeframe="5m", exchange_id=cfg.exchange.id)
+ib = fetch_intrabar_for_backtest(cfg, df, htf_timeframe=tf)
 df, ib, _ = prepare_live_like_data(df, ib, htf_timeframe=tf, sub_timeframe="5m")
 
 variants = [

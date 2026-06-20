@@ -7,8 +7,21 @@ import pandas as pd
 
 from src.utils.network import call_with_retries
 
-# Hyperliquid отдаёт не более 5000 свечей за запрос
+# Hyperliquid отдаёт не более 5000 свечей за запрос; Binance — 1000
 MAX_BATCH_SIZE = 5000
+_EXCHANGE_OHLCV_BATCH: dict[str, int] = {
+    "hyperliquid": 5000,
+    "binance": 1000,
+    "binanceusdm": 1000,
+}
+
+
+def ohlcv_batch_limit(exchange_id: str, exchange: ccxt.Exchange | None = None) -> int:
+    if exchange is not None and exchange.limits:
+        max_limit = exchange.limits.get("fetchOHLCV", {}).get("max")
+        if max_limit:
+            return int(max_limit)
+    return _EXCHANGE_OHLCV_BATCH.get(exchange_id, MAX_BATCH_SIZE)
 
 
 def _to_dataframe(all_candles: list) -> pd.DataFrame:
@@ -33,12 +46,13 @@ def fetch_ohlcv(
         exchange_class = getattr(ccxt, exchange_id)
         exchange = exchange_class({"enableRateLimit": True, "timeout": timeout_sec * 1000})
 
+    max_batch = ohlcv_batch_limit(exchange_id, exchange)
     all_candles: list = []
     since = None
     remaining = limit
 
     while remaining > 0:
-        batch_limit = min(remaining, MAX_BATCH_SIZE)
+        batch_limit = min(remaining, max_batch)
         candles = call_with_retries(
             lambda: exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=batch_limit)
         )
@@ -66,13 +80,14 @@ def fetch_ohlcv_max(
     """Загрузить максимум доступной истории с биржи (пагинация вперёд)."""
     exchange_class = getattr(ccxt, exchange_id)
     exchange = exchange_class({"enableRateLimit": True})
+    max_batch = ohlcv_batch_limit(exchange_id, exchange)
 
     since = exchange.parse8601(start_date)
     all_candles: list = []
     seen: set[int] = set()
 
     while True:
-        candles = exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=MAX_BATCH_SIZE)
+        candles = exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=max_batch)
         if not candles:
             break
 
@@ -84,7 +99,7 @@ def fetch_ohlcv_max(
 
         since = candles[-1][0] + 1
 
-        if len(candles) < MAX_BATCH_SIZE:
+        if len(candles) < max_batch:
             break
         time.sleep(exchange.rateLimit / 1000)
 
@@ -105,6 +120,8 @@ def fetch_ohlcv_range(
         exchange_class = getattr(ccxt, exchange_id)
         exchange = exchange_class({"enableRateLimit": True, "timeout": timeout_sec * 1000})
 
+    max_batch = ohlcv_batch_limit(exchange_id, exchange)
+
     if isinstance(since, pd.Timestamp):
         since_ms = int(since.timestamp() * 1000)
     else:
@@ -119,7 +136,7 @@ def fetch_ohlcv_range(
     cursor = since_ms
 
     while True:
-        candles = exchange.fetch_ohlcv(symbol, timeframe, since=cursor, limit=MAX_BATCH_SIZE)
+        candles = exchange.fetch_ohlcv(symbol, timeframe, since=cursor, limit=max_batch)
         if not candles:
             break
 
@@ -140,7 +157,7 @@ def fetch_ohlcv_range(
             break
 
         cursor = last_ts + 1
-        if len(candles) < MAX_BATCH_SIZE:
+        if len(candles) < max_batch:
             break
         time.sleep(exchange.rateLimit / 1000)
 

@@ -35,7 +35,7 @@ print("worst", round(min(t.pnl_usd or 0 for t in r.trades), 2))
 for t in r.trades:
     h = hold_min(t)
     print(
-        f"{t.side:5} {t.entry_time.strftime('%m-%d %H:%M')} "
+        f"{t.side:5} {t.entry_time.strftime('%m-%d %H:%M UTC')} "
         f"{t.entry_price:.2f}->{t.exit_price:.2f} {t.exit_reason:16} "
         f"{t.pnl_pct:+.2f}% ${t.pnl_usd:+.2f} {h:.0f}m"
     )

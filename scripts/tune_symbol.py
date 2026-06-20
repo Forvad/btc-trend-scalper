@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tabulate import tabulate
 
 from src.backtest.engine import BacktestEngine
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.config import (
     AppConfig,
     BacktestConfig,
@@ -149,12 +149,10 @@ def tune_symbol(cfg: AppConfig, *, primary_tf: str = "1h") -> dict:
     if live.backtest.live_like:
         sub_tf = live.backtest.intrabar_timeframe
         for tf in tfs:
-            ib = fetch_intrabar_for_htf(
-                symbol,
+            ib = fetch_intrabar_for_backtest(
+                live,
                 data[tf],
                 htf_timeframe=tf,
-                sub_timeframe=sub_tf,
-                exchange_id=cfg.exchange.id,
             )
             _, intrabar[tf], _ = prepare_live_like_data(
                 data[tf], ib, htf_timeframe=tf, sub_timeframe=sub_tf

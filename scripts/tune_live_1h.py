@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tabulate import tabulate
 
 from scripts.tune_symbol import core_grid, live_cfg, run_bt, score
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.config import EnhancementConfig, StrategyConfig, TrailSlConfig, load_config
 from src.data import fetch_ohlcv_max
 
@@ -24,7 +24,7 @@ def main() -> None:
     live = live_cfg(cfg)
 
     df = fetch_ohlcv_max(symbol, "1h", cfg.exchange.id)
-    ib = fetch_intrabar_for_htf(symbol, df, htf_timeframe="1h", sub_timeframe="5m", exchange_id=cfg.exchange.id)
+    ib = fetch_intrabar_for_backtest(cfg, df, htf_timeframe="1h")
     df, ib, _ = prepare_live_like_data(df, ib, htf_timeframe="1h", sub_timeframe="5m")
 
     base = StrategyConfig(

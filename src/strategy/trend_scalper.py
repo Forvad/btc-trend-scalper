@@ -57,6 +57,16 @@ class TrendScalperStrategy:
             long_signal &= data["adx"] >= enh.min_adx
             short_signal &= data["adx"] >= enh.min_adx
 
+        af = self.config.adx_filter
+        if af.enabled and "adx" in data.columns:
+            adx = data["adx"]
+            trending = adx >= af.min_for_entry
+            if af.require_rising:
+                prev_adx = adx.shift(1)
+                trending &= adx > prev_adx.fillna(adx)
+            long_signal &= trending
+            short_signal &= trending
+
         if enh.needs_htf() and "htf_bull" in data.columns:
             long_signal &= data["htf_bull"].fillna(False)
             short_signal &= data["htf_bear"].fillna(False)

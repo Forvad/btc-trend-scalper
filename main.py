@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.backtest import BacktestEngine
 from src.config import load_config
-from src.backtest.intrabar_align import fetch_intrabar_for_htf, prepare_live_like_data
+from src.backtest.intrabar_align import fetch_intrabar_for_backtest, prepare_live_like_data
 from src.data import fetch_ohlcv, fetch_ohlcv_max
 from src.live import LiveTrader, run_test_orders
 from src.notifications import NtfyNotifier
@@ -65,22 +65,23 @@ def run_backtest(
 
     if live_like:
         sub_tf = config.backtest.intrabar_timeframe
+        ib_ex = config.intrabar_exchange_id()
+        ib_sym = config.intrabar_symbol()
         app_log.data(
-            f"Загрузка {timeframe} + intrabar ({sub_tf}) для live-like бэктеста..."
+            f"Загрузка {timeframe} ({config.exchange.id}) + intrabar "
+            f"{sub_tf} ({ib_ex} {ib_sym}) для live-like бэктеста..."
         )
         htf_requested_start = df["timestamp"].iloc[0]
-        intrabar_df = fetch_intrabar_for_htf(
-            config.symbol,
+        intrabar_df = fetch_intrabar_for_backtest(
+            config,
             df,
             htf_timeframe=timeframe,
-            sub_timeframe=sub_tf,
-            exchange_id=config.exchange.id,
         )
         ib_available_start = intrabar_df["timestamp"].iloc[0]
         if ib_available_start > htf_requested_start:
             gap_days = (ib_available_start - htf_requested_start).days
             app_log.warning(
-                f"На бирже {sub_tf} доступен только с {ib_available_start} "
+                f"Intrabar {sub_tf} на {ib_ex} доступен только с {ib_available_start} "
                 f"({gap_days} дн. короче запрошенного {timeframe}) — HTF будет обрезан"
             )
         htf_before = len(df)
@@ -171,7 +172,7 @@ def run_backtest(
         open_row = [
             [
                 op.side.upper(),
-                op.entry_time.strftime("%Y-%m-%d %H:%M"),
+                op.entry_time.strftime("%Y-%m-%d %H:%M UTC"),
                 f"{op.entry_price:.2f}",
                 "-",
                 f"{op.mark_price:.2f} (mark)",
@@ -208,9 +209,9 @@ def run_backtest(
         table = [
             [
                 t.side.upper(),
-                t.entry_time.strftime("%Y-%m-%d %H:%M"),
+                t.entry_time.strftime("%Y-%m-%d %H:%M UTC"),
                 f"{t.entry_price:.2f}",
-                t.exit_time.strftime("%Y-%m-%d %H:%M") if t.exit_time else "-",
+                t.exit_time.strftime("%Y-%m-%d %H:%M UTC") if t.exit_time else "-",
                 f"{t.exit_price:.2f}" if t.exit_price else "-",
                 t.exit_reason or "-",
                 f"{t.pnl_pct:+.2f}%" if t.pnl_pct else "-",
@@ -218,7 +219,7 @@ def run_backtest(
             ]
             for t in result.trades[-20:]
         ]
-        app_log.info("\nПоследние сделки (до 20):\n")
+        app_log.info("\nПоследние сделки (до 20, время UTC):\n")
         app_log.info(
             tabulate(
                 table,

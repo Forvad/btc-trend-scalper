@@ -141,3 +141,35 @@ def test_tick_skips_short_entry_when_sl_invalid(_mock_hl, _mock_pub, mock_fetch)
 
     trader._open_position.assert_called_once_with("short", signal)
     assert result["action"] == "hold"
+
+
+@patch("src.live.trader.create_public_exchange")
+@patch("src.live.trader.create_hyperliquid_exchange")
+def test_transient_tick_failure_does_not_notify(_mock_hl, _mock_pub) -> None:
+    import ccxt
+
+    config = AppConfig()
+    config.exchange = ExchangeConfig(symbol="HYPE/USDC:USDC")
+    trader = LiveTrader(config, timeframe="1h", dry_run=True)
+    trader.notifier = MagicMock()
+    trader._reconnect_exchange = MagicMock(
+        side_effect=ccxt.ExchangeNotAvailable("502 Bad Gateway")
+    )
+
+    exc = ccxt.ExchangeNotAvailable("hyperliquid 502 Bad Gateway")
+    trader._handle_tick_failure(exc, context="tick")
+
+    trader.notifier.notify_exception.assert_not_called()
+
+
+@patch("src.live.trader.create_public_exchange")
+@patch("src.live.trader.create_hyperliquid_exchange")
+def test_non_transient_tick_failure_notifies(_mock_hl, _mock_pub) -> None:
+    config = AppConfig()
+    config.exchange = ExchangeConfig(symbol="HYPE/USDC:USDC")
+    trader = LiveTrader(config, timeframe="1h", dry_run=True)
+    trader.notifier = MagicMock()
+
+    trader._handle_tick_failure(ValueError("bad config"), context="tick")
+
+    trader.notifier.notify_exception.assert_called_once()

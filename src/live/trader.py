@@ -38,6 +38,7 @@ from src.notifications import NtfyNotifier
 from src.strategy import TrendScalperStrategy
 from src.strategy.htf import htf_for_timeframe
 from src.utils.log import Log, setup_logging
+from src.utils.network import is_transient_network_error
 from src.utils.runtime import call_with_timeout
 
 PositionSide = Literal["long", "short"]
@@ -128,7 +129,15 @@ class LiveTrader:
     def _handle_tick_failure(self, exc: BaseException, *, context: str) -> None:
         if is_transient_network_error(exc) or isinstance(exc, TimeoutError):
             self._log(f"WARN: {context}: {exc} — retry next tick")
-            self._reconnect_exchange()
+            try:
+                self._reconnect_exchange()
+            except Exception as reconnect_exc:
+                if is_transient_network_error(reconnect_exc) or isinstance(
+                    reconnect_exc, TimeoutError
+                ):
+                    self._log(f"WARN: reconnect skipped: {reconnect_exc}")
+                    return
+                self._report_error(reconnect_exc, context=f"{context} reconnect")
             return
         self._report_error(exc, context=context)
 

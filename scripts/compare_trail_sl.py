@@ -16,7 +16,7 @@ from tabulate import tabulate
 from src.backtest import BacktestEngine, BacktestResult
 from src.backtest.intrabar_align import (
     IntrabarAlignStats,
-    fetch_intrabar_for_htf,
+    fetch_intrabar_for_backtest,
     prepare_live_like_data,
 )
 from src.config import load_config
@@ -101,12 +101,10 @@ def main() -> None:
         exchange_id=config.exchange.id,
     )
     sub_tf = config.backtest.intrabar_timeframe
-    intrabar_df = fetch_intrabar_for_htf(
-        config.symbol,
+    intrabar_df = fetch_intrabar_for_backtest(
+        config,
         df,
         htf_timeframe=timeframe,
-        sub_timeframe=sub_tf,
-        exchange_id=config.exchange.id,
     )
     df, intrabar_df, align = prepare_live_like_data(
         df, intrabar_df, htf_timeframe=timeframe, sub_timeframe=sub_tf

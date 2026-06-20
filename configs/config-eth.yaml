@@ -83,6 +83,7 @@ backtest:
   candles_limit: 1000
   live_like: true
   intrabar_timeframe: 5m
+  intrabar_exchange: binance
 paper:
   poll_interval_sec: 60
   initial_balance: 100.0
